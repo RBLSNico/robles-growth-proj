@@ -1,0 +1,3 @@
+#shopify-chat-widget-wrapper { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+#shopify-chat-widget-wrapper iframe { transition: transform 220ms ease, opacity 160ms ease; border-radius: 12px; overflow: hidden; }
+#shopify-chat-widget-button { display: inline-flex; align-items: center; justify-content: center; }
