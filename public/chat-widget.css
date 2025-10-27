@@ -1,3 +1,15 @@
 #shopify-chat-widget-wrapper { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
 #shopify-chat-widget-wrapper iframe { transition: transform 220ms ease, opacity 160ms ease; border-radius: 12px; overflow: hidden; }
 #shopify-chat-widget-button { display: inline-flex; align-items: center; justify-content: center; }
+#shopify-chat-widget-floating iframe {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Make the embedded container full-width inside themes when used as an embed placeholder */
+[data-shopify-chat-widget] iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 8px !important;
+  display: block;
+}
