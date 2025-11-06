@@ -13,3 +13,194 @@
   border-radius: 8px !important;
   display: block;
 }
+
+/* -----------------------
+   Inline DOM widget styles
+   ----------------------- */
+.scw-floating { font-family: Inter, system-ui, -apple-system, Roboto, "Helvetica Neue", Arial; pointer-events: auto; }
+.scw-root {
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #ffffff, #fbfbff);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform-origin: bottom right;
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease, width 220ms ease;
+  border: 1px solid rgba(16,24,40,0.05);
+  color: #0b1228;
+  transform: translateY(8px) scale(0.985);
+  opacity: 0;
+}
+.scw-root.scw-open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+/* closed state */
+.scw-root[data-open="false"] {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: visible;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  gap: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+.scw-header-text { display: flex; flex-direction: column; }
+.scw-title { font-weight: 700; font-size: 13px; line-height: 1; }
+.scw-subtitle { font-size: 11px; opacity: 0.95; }
+
+.scw-toggle {
+  background: rgba(255,255,255,0.12);
+  border: none;
+  color: white;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.scw-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+  background: linear-gradient(180deg, rgba(11,20,40,0.02), transparent);
+}
+
+.scw-msg {
+  padding: 8px 12px;
+  border-radius: 12px;
+  max-width: 85%;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  font-size: 13px;
+  margin-bottom: 8px;
+  transform: translateY(6px);
+  opacity: 0;
+  transition: transform 240ms cubic-bezier(.2,.8,.2,1), opacity 220ms ease;
+}
+.scw-msg.show { transform: translateY(0); opacity: 1; }
+.scw-msg-assistant { align-self: flex-start; background: #f4f6ff; color: #0b1228; }
+.scw-msg-user { align-self: flex-end; color: white; background: linear-gradient(90deg,#5b8def,#7b61ff); }
+
+.scw-footer {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid rgba(16,24,40,0.03);
+  background: rgba(255,255,255,0.9);
+  align-items: center;
+}
+
+.scw-input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(16,24,40,0.06);
+  resize: none;
+  font-size: 13px;
+  min-height: 36px;
+  max-height: 90px;
+  outline: none;
+}
+
+.scw-send {
+  background: linear-gradient(90deg, #5b8def, #7b61ff);
+  border: none;
+  color: white;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* mini icon (closed state) */
+.scw-mini-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+  overflow: hidden;
+  cursor: pointer;
+}
+.scw-mini-icon img,
+.scw-mini-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* show mini icon when closed, hide header text */
+.scw-root[data-open="false"] .scw-mini-icon {
+  display: flex;
+}
+/* hide everything else when closed so only the mini icon is visible */
+.scw-root[data-open="false"] .scw-header-text,
+.scw-root[data-open="false"] .scw-toggle,
+.scw-root[data-open="false"] .scw-body,
+.scw-root[data-open="false"] .scw-footer,
+.scw-root[data-open="false"] .scw-input,
+.scw-root[data-open="false"] .scw-send {
+  display: none !important;
+}
+
+/* tighten the closed container so it looks like a single icon/shape */
+.scw-root[data-open="false"] {
+  width: 56px;
+  height: 56px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ensure the mini icon sits centered and is accessible */
+.scw-mini-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* small screens: make widget full width when open */
+@media (max-width: 520px) {
+  .scw-root.scw-open {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    bottom: 12px;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .scw-root[data-open="false"] {
+    right: 12px;
+    bottom: 12px;
+  }
+}

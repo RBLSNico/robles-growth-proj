@@ -97,15 +97,37 @@ export default function ChatWidget({
       data-embedded={embedded}
       style={{ position: "absolute", ...posStyle }}
     >
-      <div className={styles.header} style={headerStyle}>
-        <div>
+      <div
+        className={styles.header}
+        style={headerStyle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+      >
+        <div className={styles.headerText}>
           <div className={styles.title}>Instant Checkout Help</div>
           <div className={styles.subtitle}>Get help using Instant Checkout</div>
+        </div>
+        <div className={styles.miniIcon} aria-hidden>
+          {/* default SVG icon (replaceable via settings later) */}
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 3C7.03 3 3 6.69 3 11c0 1.9.73 3.66 1.99 5.12L4 21l4.18-1.4C9.03 19.83 10.5 20 12 20c4.97 0 9-3.69 9-8s-4.03-9-9-9z" fill="#5B8DEF"/>
+          </svg>
         </div>
         <button
           className={styles.toggleButton}
           aria-label={open ? "Close chat" : "Open chat"}
-          onClick={() => setOpen((v) => !v)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
         >
           {open ? "−" : "✚"}
         </button>

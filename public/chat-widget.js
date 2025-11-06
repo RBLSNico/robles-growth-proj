@@ -11,169 +11,323 @@
     }
   }
 
+  // Inline CSS fallback to ensure widget styles apply in storefronts
+  const INLINE_CHAT_WIDGET_CSS = `
+  .scw-floating { font-family: Inter, system-ui, -apple-system, Roboto, "Helvetica Neue", Arial; pointer-events: auto; }
+  .scw-root { box-sizing: border-box; background: linear-gradient(180deg, #ffffff, #fbfbff); border-radius: 12px; box-shadow: 0 10px 30px rgba(16,24,40,0.12); overflow: hidden; display: flex; flex-direction: column; transform-origin: bottom right; transition: transform 220ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease, width 220ms ease; border: 1px solid rgba(16,24,40,0.05); color: #0b1228; transform: translateY(8px) scale(0.985); opacity: 0; }
+  .scw-root.scw-open { transform: translateY(0) scale(1); opacity: 1; }
+  /* closed (compact) visual */
+  .scw-root[data-open="false"] { width: 56px; height: 56px; border-radius: 999px; overflow: visible; padding: 0; display: block; transform: scale(1); opacity: 1; }
+  .scw-header { display: flex; align-items: center; justify-content: space-between; padding: 12px; gap: 8px; color: white; cursor: pointer; }
+  .scw-header-text { display: flex; flex-direction: column; }
+  .scw-title { font-weight: 700; font-size: 13px; line-height: 1; }
+  .scw-subtitle { font-size: 11px; opacity: 0.95; }
+  .scw-toggle { background: rgba(255,255,255,0.12); border: none; color: white; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1; }
+  .scw-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow: auto; background: linear-gradient(180deg, rgba(11,20,40,0.02), transparent); }
+  .scw-msg { padding: 8px 12px; border-radius: 12px; max-width: 85%; box-shadow: 0 1px 2px rgba(16,24,40,0.04); font-size: 13px; margin-bottom: 8px; transform: translateY(6px); opacity: 0; transition: transform 240ms cubic-bezier(.2,.8,.2,1), opacity 220ms ease; }
+  .scw-msg.show { transform: translateY(0); opacity: 1; }
+  .scw-msg-assistant { align-self: flex-start; background: #f4f6ff; color: #0b1228; }
+  .scw-msg-user { align-self: flex-end; color: white; background: linear-gradient(90deg,#5b8def,#7b61ff); }
+  .scw-footer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid rgba(16,24,40,0.03); background: rgba(255,255,255,0.9); align-items: center; }
+  .scw-input { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(16,24,40,0.06); resize: none; font-size: 13px; min-height: 36px; max-height: 90px; outline: none; }
+  .scw-send { background: linear-gradient(90deg, #5b8def, #7b61ff); border: none; color: white; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  /* mini icon (closed state) */
+  .scw-mini-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+    overflow: hidden;
+  }
+  .scw-mini-icon img, .scw-mini-icon svg { width: 22px; height: 22px; display: block; }
+  /* show mini icon when closed */
+  .scw-root[data-open="false"] .scw-mini-icon { display: flex; }
+  /* hide header text when closed */
+  .scw-root[data-open="false"] .scw-header-text { display: none; }
+  @media (max-width:520px){ .scw-root[data-open="true"]{ left:12px !important; right:12px !important; width:auto !important; max-width:none !important; bottom:12px !important } .scw-root[data-open="false"]{ right:12px !important; bottom:12px !important } }
+  `;
+
   function ensureCss(appUrl) {
     try {
+      // If external CSS is already present, skip
       if (document.getElementById("shopify-chat-widget-css")) return;
+
+      // Try to load external CSS from the app host (best effort)
       var link = document.createElement("link");
       link.id = "shopify-chat-widget-css";
       link.rel = "stylesheet";
       link.href = (appUrl || "") + "/chat-widget.css";
+      // onerror: fall back to inline CSS
+      link.onerror = function () {
+        if (!document.getElementById("shopify-chat-widget-inline-css")) {
+          var style = document.createElement("style");
+          style.id = "shopify-chat-widget-inline-css";
+          style.appendChild(document.createTextNode(INLINE_CHAT_WIDGET_CSS));
+          document.head.appendChild(style);
+        }
+      };
       document.head.appendChild(link);
+
+      // Also inject inline CSS immediately as a reliable fallback (harmless if external loads)
+      if (!document.getElementById("shopify-chat-widget-inline-css")) {
+        var styleImmediate = document.createElement("style");
+        styleImmediate.id = "shopify-chat-widget-inline-css";
+        styleImmediate.appendChild(document.createTextNode(INLINE_CHAT_WIDGET_CSS));
+        document.head.appendChild(styleImmediate);
+      }
     } catch (e) {
-      /* ignore */
+      // final fallback: inject inline style directly
+      if (!document.getElementById("shopify-chat-widget-inline-css")) {
+        var style = document.createElement("style");
+        style.id = "shopify-chat-widget-inline-css";
+        style.appendChild(document.createTextNode(INLINE_CHAT_WIDGET_CSS));
+        document.head.appendChild(style);
+      }
     }
   }
 
-  // Build iframe element that points at the app-hosted preview URL with embed flag.
-  function makeIframe(appUrl, settings) {
-    var iframe = document.createElement("iframe");
-    var src = (appUrl || "") + "/app/chat-widget?embed=true";
-    // pass settings via query so the preview route can read them if needed
-    var params = new URLSearchParams();
-    if (settings) {
-      if (settings.position) params.set("position", settings.position);
-      if (settings.primaryColor) params.set("primaryColor", settings.primaryColor);
-      if (settings.accentColor) params.set("accentColor", settings.accentColor);
-      if (settings.greeting) params.set("greeting", settings.greeting);
-      if (settings.defaultOpen) params.set("embed", "true");
-    }
-    var fullSrc = src + (Array.from(params).length ? "&" + params.toString() : "");
-    iframe.src = fullSrc;
-    iframe.style.width = "100%";
-    iframe.style.height = "560px";
-    iframe.style.border = "0";
-    iframe.style.borderRadius = "12px";
-    iframe.style.boxSizing = "border-box";
-    iframe.style.display = "block";
-    iframe.setAttribute("aria-hidden", "false");
-    return iframe;
+  function createNode(html) {
+    var template = document.createElement("template");
+    template.innerHTML = html.trim();
+    return template.content.firstChild;
   }
 
-  // Insert a floating iframe in the corner for simple script-tag integration
-  function injectFloatingIframe(appUrl, settings) {
-    ensureCss(appUrl);
+  function mountWidget(settings) {
+    if (!settings || settings.enabled === "false" || settings.enabled === "0") return;
+
     var wrapperId = "shopify-chat-widget-floating";
     if (document.getElementById(wrapperId)) return;
+
     var wrapper = document.createElement("div");
     wrapper.id = wrapperId;
+    wrapper.className = "scw-floating";
     wrapper.style.position = "fixed";
-    wrapper.style.right = settings && settings.position === "bl" ? "auto" : "16px";
-    wrapper.style.left = settings && settings.position === "bl" ? "16px" : "auto";
-    wrapper.style.bottom = "16px";
     wrapper.style.zIndex = "999999";
     wrapper.style.width = "360px";
     wrapper.style.maxWidth = "calc(100% - 32px)";
+    wrapper.style.boxSizing = "border-box";
 
-    var iframe = makeIframe(appUrl, settings);
-    iframe.style.height = "520px";
-    iframe.style.width = "100%";
-    iframe.style.boxShadow = "0 10px 30px rgba(16,24,40,0.12)";
-
-    // toggle button
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.innerText = "Close";
-    btn.style.position = "absolute";
-    btn.style.top = "8px";
-    btn.style.right = "8px";
-    btn.style.zIndex = "1000000";
-    btn.style.background = "rgba(255,255,255,0.9)";
-    btn.style.border = "none";
-    btn.style.padding = "6px 8px";
-    btn.style.borderRadius = "6px";
-    btn.style.cursor = "pointer";
-    btn.addEventListener("click", function () {
-      // simple close: remove wrapper
-      wrapper.remove();
-    });
-
-    wrapper.appendChild(iframe);
-    wrapper.appendChild(btn);
-    document.body.appendChild(wrapper);
-  }
-
-  // Mount into placeholder element(s) used by Theme App Embed
-  function mountEmbeds(appUrl) {
-    ensureCss(appUrl);
-    var nodes = document.querySelectorAll("[data-shopify-chat-widget]");
-    nodes.forEach(function (el) {
-      // If already mounted, skip
-      if (el.getAttribute("data-chat-mounted") === "1") return;
-
-      var settings = {
-        enabled: el.getAttribute("data-enabled"),
-        defaultOpen: el.getAttribute("data-default-open"),
-        position: el.getAttribute("data-position"),
-        primaryColor: el.getAttribute("data-primary-color"),
-        accentColor: el.getAttribute("data-accent-color"),
-        greeting: safeDecode(el.getAttribute("data-greeting")),
-      };
-
-      // If disabled explicitly, do nothing
-      if (settings.enabled === "false" || settings.enabled === "0") {
-        el.setAttribute("data-chat-mounted", "1");
-        return;
-      }
-
-      // Insert iframe into the element (full width)
-      var iframe = makeIframe(appUrl, settings);
-      // adapt iframe height to element size or default
-      iframe.style.height = el.getAttribute("data-height") || "520px";
-      iframe.style.border = "0";
-      ifaceSafeAppend(el, iframe);
-
-      el.setAttribute("data-chat-mounted", "1");
-    });
-  }
-
-  function ifaceSafeAppend(el, child) {
-    try {
-      el.innerHTML = "";
-      el.appendChild(child);
-    } catch (e) {
-      // fallback: append to body
-      document.body.appendChild(child);
+    if (settings.position === "bl") {
+      wrapper.style.left = "16px";
+      wrapper.style.right = "auto";
+      wrapper.style.bottom = "16px";
+    } else {
+      wrapper.style.right = "16px";
+      wrapper.style.left = "auto";
+      wrapper.style.bottom = "16px";
     }
+
+    var root = createNode(
+      '<div id="shopify-chat-widget-root" class="scw-root" data-open="false" aria-hidden="false"></div>',
+    );
+
+    // header + body + footer
+    var header = createNode(
+      '<div class="scw-header" role="button" aria-label="Chat header" tabindex="0"></div>',
+    );
+    // header text
+    var headerText = document.createElement("div");
+    headerText.className = "scw-header-text";
+    headerText.innerHTML = '<div class="scw-title">Instant Checkout Help</div><div class="scw-subtitle">Get help using Instant Checkout</div>';
+    header.appendChild(headerText);
+
+    // mini icon (visible when closed). allow override via settings.iconUrl
+    var miniIcon = document.createElement("div");
+    miniIcon.className = "scw-mini-icon";
+    if (settings.iconUrl) {
+      var img = document.createElement("img");
+      img.src = settings.iconUrl;
+      img.alt = "Chat";
+      miniIcon.appendChild(img);
+    } else {
+      // default inline SVG
+      miniIcon.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 3C7.03 3 3 6.69 3 11c0 1.9.73 3.66 1.99 5.12L4 21l4.18-1.4C9.03 19.83 10.5 20 12 20c4.97 0 9-3.69 9-8s-4.03-9-9-9z" fill="#5B8DEF"/></svg>';
+    }
+    header.appendChild(miniIcon);
+
+    var toggleBtn = document.createElement("button");
+    toggleBtn.className = "scw-toggle";
+    toggleBtn.type = "button";
+    toggleBtn.innerText = settings.defaultOpen === "true" || settings.defaultOpen === true ? "−" : "✚";
+    header.appendChild(toggleBtn);
+
+    var body = createNode('<div class="scw-body" role="log" aria-live="polite"></div>');
+    body.style.maxHeight = "320px";
+    body.style.overflow = "auto";
+
+    var footer = createNode('<div class="scw-footer"></div>');
+    var input = document.createElement("textarea");
+    input.className = "scw-input";
+    input.placeholder = "Ask about Instant Checkout...";
+    input.rows = 1;
+    var send = document.createElement("button");
+    send.className = "scw-send";
+    send.type = "button";
+    send.innerText = "Send";
+
+    footer.appendChild(input);
+    footer.appendChild(send);
+
+    root.appendChild(header);
+    root.appendChild(body);
+    root.appendChild(footer);
+    wrapper.appendChild(root);
+    document.body.appendChild(wrapper);
+
+    // apply colors
+    var primary = settings.primaryColor || "#5b8def";
+    var accent = settings.accentColor || "#7b61ff";
+    header.style.background = "linear-gradient(90deg," + primary + " 0%," + accent + " 100%)";
+    toggleBtn.style.background = "rgba(255,255,255,0.12)";
+
+    // state
+    var open = settings.defaultOpen === "true" || settings.defaultOpen === true || settings.embedded === true;
+    var messages = [];
+    function setOpen(val) {
+      open = Boolean(val);
+      root.setAttribute("data-open", open ? "true" : "false");
+      toggleBtn.innerText = open ? "−" : "✚";
+      if (open) {
+        // animate open
+        root.classList.add("scw-open");
+        // ensure inner areas visible after a short delay so transitions run
+        setTimeout(function () {
+          body.style.display = "block";
+          footer.style.display = "flex";
+          body.scrollTop = body.scrollHeight;
+        }, 18);
+      } else {
+        // animate close
+        root.classList.remove("scw-open");
+        // wait for transition before hiding inner content to keep smooth animation
+        setTimeout(function () {
+          body.style.display = "none";
+          footer.style.display = "none";
+        }, 220);
+      }
+    }
+
+    // initial greeting
+    var greeting = settings.greeting || "Welcome! I can help you with Instant Checkout info.";
+    messages.push({ who: "assistant", text: greeting });
+
+    function renderMessages() {
+      body.innerHTML = "";
+      messages.forEach(function (m, idx) {
+        var el = document.createElement("div");
+        el.className = m.who === "user" ? "scw-msg scw-msg-user" : "scw-msg scw-msg-assistant";
+        el.innerText = m.text;
+        body.appendChild(el);
+        // staggered reveal
+        window.requestAnimationFrame(function () {
+          setTimeout(function () {
+            el.classList.add("show");
+          }, idx * 40);
+        });
+      });
+      // ensure scroll to bottom after animations start
+      setTimeout(function () {
+        body.scrollTop = body.scrollHeight;
+      }, 60);
+    }
+
+    function sendMessage(text) {
+      if (!text || !text.trim()) return;
+      messages.push({ who: "user", text: text.trim() });
+      renderMessages();
+      input.value = "";
+      // simulate assistant reply
+      setTimeout(function () {
+        messages.push({
+          who: "assistant",
+          text:
+            "Thanks! Instant Checkout lets customers complete purchases directly in chat. (Demo response.)",
+        });
+        renderMessages();
+      }, 600 + Math.random() * 700);
+    }
+
+    // events
+    header.addEventListener("click", function (e) {
+      setOpen(!open);
+    });
+    header.addEventListener("keypress", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpen(!open);
+      }
+    });
+    toggleBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      setOpen(!open);
+    });
+    send.addEventListener("click", function () {
+      sendMessage(input.value);
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(input.value);
+      }
+    });
+
+    // initial render
+    renderMessages();
+    setOpen(open);
   }
 
-  // main init: determine appUrl and settings from script tag or default
+  // main init
   function init() {
     try {
+      // Prefer the actual chat-widget.js <script> tag (works when document.currentScript is null)
       var currentScript = document.currentScript;
-      if (!currentScript) {
+      if (!currentScript || !currentScript.getAttribute) {
         var scripts = document.getElementsByTagName("script");
-        currentScript = scripts[scripts.length - 1];
+        // Search for a script whose src contains 'chat-widget.js' (walk backwards to prefer later inclusions)
+        for (var i = scripts.length - 1; i >= 0; i--) {
+          try {
+            var s = scripts[i];
+            var src = s.getAttribute && s.getAttribute("src");
+            if (src && src.indexOf("chat-widget.js") !== -1) {
+              currentScript = s;
+              break;
+            }
+          } catch (e) {
+            // ignore and continue searching
+          }
+        }
+        // final fallback: last script on the page
+        if (!currentScript) {
+          currentScript = scripts[scripts.length - 1];
+        }
       }
+
       var appUrl = (currentScript && currentScript.getAttribute("data-app-url")) || "";
-      // if there are explicit placeholders, mount them
-      var hasPlaceholders = document.querySelector("[data-shopify-chat-widget]") !== null;
-      if (hasPlaceholders) {
-        mountEmbeds(appUrl);
-        return;
-      }
+      ensureCss(appUrl);
 
-      // fallback: try to read data attributes from the script tag
-      var settings = null;
-      if (currentScript) {
-        settings = {
-          enabled: currentScript.getAttribute("data-enabled"),
-          defaultOpen: currentScript.getAttribute("data-default-open"),
-          position: currentScript.getAttribute("data-position"),
-          primaryColor: currentScript.getAttribute("data-primary-color"),
-          accentColor: currentScript.getAttribute("data-accent-color"),
-          greeting: safeDecode(currentScript.getAttribute("data-greeting")),
-        };
-      }
+      // read settings from script attributes
+      var settings = {
+        enabled: currentScript?.getAttribute("data-enabled") ?? "true",
+        defaultOpen: currentScript?.getAttribute("data-default-open") ?? "false",
+        position: currentScript?.getAttribute("data-position") ?? "br",
+        primaryColor: currentScript?.getAttribute("data-primary-color") ?? undefined,
+        accentColor: currentScript?.getAttribute("data-accent-color") ?? undefined,
+        greeting: safeDecode(currentScript?.getAttribute("data-greeting")),
+        embedded: currentScript?.getAttribute("data-default-open") === "true" || currentScript?.getAttribute("data-embed") === "true",
+        // optional icon override
+        iconUrl: currentScript?.getAttribute("data-icon-url") ?? undefined,
+      };
 
-      // If enabled explicitly false, don't inject
-      if (settings && (settings.enabled === "false" || settings.enabled === "0")) {
-        return;
-      }
+      // If disabled explicitly false, don't inject
+      if (settings.enabled === "false" || settings.enabled === "0") return;
 
-      // Inject a floating iframe for simple use-cases
-      injectFloatingIframe(appUrl, settings);
+      mountWidget(settings);
     } catch (e) {
-      // safe fail
       console.error("chat-widget loader error", e);
     }
   }

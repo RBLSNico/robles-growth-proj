@@ -128,6 +128,46 @@
   font-weight: 600;
 }
 
+.headerText { display: block; }
+
+/* mini icon for minimized state (hidden when open) */
+.miniIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  box-shadow: 0 4px 12px rgba(2,6,23,0.08);
+  overflow: hidden;
+}
+
+.miniIcon svg { width: 22px; height: 22px; display: block; }
+
+/* When widget is closed, show only the mini icon and hide other UI pieces */
+.widgetRoot:not(.open) .miniIcon {
+  display: flex;
+}
+.widgetRoot:not(.open) .headerText,
+.widgetRoot:not(.open) .toggleButton,
+.widgetRoot:not(.open) .body,
+.widgetRoot:not(.open) .footer,
+.widgetRoot:not(.open) .input,
+.widgetRoot:not(.open) .sendButton {
+  display: none !important;
+}
+
+/* tighten the closed container */
+.widgetRoot:not(.open) {
+  width: 56px;
+  height: 56px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* small screens: make widget full width when open */
 @media (max-width: 520px) {
   .widgetRoot.open {

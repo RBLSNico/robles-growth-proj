@@ -29,22 +29,6 @@ export default function SettingsPage() {
     greeting,
   )}" defer></script>`;
 
-  // Theme app embed snippet: a placeholder div that the loader script will find & mount into.
-  const themeEmbedSnippet = `<!-- Chat widget (Theme App Embed) -->
-<!-- Add this block to your theme (e.g. theme.liquid) or include in a theme app block.
-     No short code required: toggling the embed will show/hide this element. -->
-<div
-  data-shopify-chat-widget="true"
-  data-app-url="${appUrl}"
-  data-enabled="${enabled}"
-  data-default-open="${defaultOpen}"
-  data-position="${position}"
-  data-primary-color="${primaryColor}"
-  data-accent-color="${accentColor}"
-  data-greeting="${encodeURIComponent(greeting)}"
-></div>
-<script src="${appUrl}/chat-widget.js" defer></script>`;
-
   const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard?.writeText(text);
@@ -216,8 +200,9 @@ export default function SettingsPage() {
           <div>
             <p style={{ margin: 0, color: "#374151", fontSize: 13 }}>
               Paste the snippet into your theme (for example before the closing{" "}
-              <code>&lt;/body&gt;</code>). The data attributes reflect the current
-              settings and can be read by the widget loader.
+              <code>&lt;/body&gt;</code>). The loader script will create an iframe
+              that points to the app-hosted embeddable widget. Ensure the appUrl
+              matches your dev tunnel URL (including protocol).
             </p>
 
             <pre
@@ -239,65 +224,10 @@ export default function SettingsPage() {
         </section>
 
         <section style={{ marginTop: 20 }}>
-          <h2 style={{ margin: "8px 0" }}>Enable via Theme app embed</h2>
-          <p style={{ margin: 0, color: "#374151", fontSize: 13 }}>
-            Instead of adding a shortcode to pages, you can add the small embed placeholder to your theme (or include it via a theme app embed/extension). The loader script will automatically mount the widget when the placeholder is present — so enabling/disabling the embed in the theme will toggle the widget.
-          </p>
-
-          <div style={{ marginTop: 12 }}>
-            <pre
-              style={{
-                background: "#0f1724",
-                color: "#e6eef8",
-                padding: 12,
-                borderRadius: 8,
-                overflow: "auto",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-              }}
-            >
-              {themeEmbedSnippet}
-            </pre>
-
-            <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={() => copyToClipboard(themeEmbedSnippet)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(16,24,40,0.06)",
-                  background: "#fff",
-                }}
-              >
-                Copy Theme App Embed snippet
-              </button>
-
-              <button
-                onClick={() => copyToClipboard(snippet)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "linear-gradient(90deg,#5b8def,#7b61ff)",
-                  color: "white",
-                }}
-              >
-                Copy simple script snippet
-              </button>
-            </div>
-
-            <p style={{ marginTop: 12, color: "#374151", fontSize: 13 }}>
-              Notes: If you use a Theme App Extension, include the embed placeholder in the section file the extension provides. The data attributes on the placeholder will be read by the loader to apply settings without requiring a shortcode.
-            </p>
-          </div>
-        </section>
-
-        <section style={{ marginTop: 20 }}>
           <h2 style={{ margin: "8px 0" }}>Preview</h2>
           <p style={{ margin: 0, color: "#374151", fontSize: 13 }}>
             Live preview uses the settings above. This preview runs in the admin
-            and does not represent the storefront environment exactly, but it
-            shows appearance & behaviour.
+            and shows appearance & behaviour of the embeddable widget.
           </p>
 
           {showPreview && (
@@ -339,12 +269,11 @@ export default function SettingsPage() {
           <h3 style={{ margin: "8px 0" }}>Notes</h3>
           <ul style={{ marginTop: 0, color: "#374151" }}>
             <li>
-              The generated snippet includes data attributes; update your public
-              loader script to read them and initialize the widget accordingly.
+              Use the single script snippet above in your theme. The loader will
+              create an iframe that loads the embeddable widget from {appUrl}/chat-widget.
             </li>
             <li>
-              Preview runs in the admin; iframe-based storefront embedding may
-              have slightly different sizing/behavior.
+              Ensure the appUrl matches your dev tunnel URL (including https/http).
             </li>
           </ul>
         </section>
