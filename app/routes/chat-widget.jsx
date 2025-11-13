@@ -11,8 +11,9 @@ export default function ChatWidgetEmbedPage() {
 
   return (
     <div style={{ padding: 12, fontFamily: "Inter, system-ui, -apple-system, Roboto, Arial" }}>
-      <div style={{ maxWidth: "100%", minHeight: 320, position: "relative" }}>
-        <ChatWidget embedded={embedded || true} />
+      {/* remove relative wrapper so fixed positioning reaches viewport edges */}
+      <div style={{ maxWidth: "100%", minHeight: 320 }}>
+        <ChatWidget embedded={embedded} />
       </div>
     </div>
   );

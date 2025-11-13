@@ -24,10 +24,22 @@ export default function SettingsPage() {
   );
   const [showPreview, setShowPreview] = useState(true);
 
+  // New settings
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [iconUrl, setIconUrl] = useState(""); // <-- added
+  const [minimizeOnScroll, setMinimizeOnScroll] = useState(false);
+  const [persistOpen, setPersistOpen] = useState(true);
+  const [analyticsEndpoint, setAnalyticsEndpoint] = useState("");
+  const [offsetRight, setOffsetRight] = useState(20);
+  const [offsetBottom, setOffsetBottom] = useState(20);
+  const [size, setSize] = useState(56);
+  const [borderRadius, setBorderRadius] = useState(12);
+  const [locale, setLocale] = useState("en");
+
   // Build a snippet that encodes settings as data attributes (the public script can later read these)
   const snippet = `<script src="${appUrl}/chat-widget.js" data-app-url="${appUrl}" data-enabled="${enabled}" data-default-open="${defaultOpen}" data-position="${position}" data-primary-color="${primaryColor}" data-accent-color="${accentColor}" data-greeting="${encodeURIComponent(
     greeting,
-  )}" defer></script>`;
+  )}" data-avatar-url="${encodeURIComponent(avatarUrl || "")}" data-icon-url="${encodeURIComponent(iconUrl || "")}" data-minimize-on-scroll="${minimizeOnScroll}" data-persist-open="${persistOpen}" data-analytics-endpoint="${encodeURIComponent(analyticsEndpoint || "")}" data-offset-right="${offsetRight}" data-offset-bottom="${offsetBottom}" data-size="${size}" data-border-radius="${borderRadius}" data-locale="${locale}" defer></script>`;
 
   const copyToClipboard = async (text) => {
     try {
@@ -110,6 +122,17 @@ export default function SettingsPage() {
               flexWrap: "wrap",
             }}
           >
+            <label style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 200 }}>
+              Icon URL
+              <input
+                type="text"
+                value={iconUrl}
+                onChange={(e) => setIconUrl(e.target.value)}
+                placeholder="https://…/icon.png"
+                style={{ marginLeft: 6, padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(16,24,40,0.08)" }}
+              />
+            </label>
+
             <label
               style={{
                 display: "flex",
@@ -259,6 +282,15 @@ export default function SettingsPage() {
                   primaryColor={primaryColor}
                   accentColor={accentColor}
                   greeting={greeting}
+                  avatarUrl={avatarUrl}
+                  iconUrl={iconUrl} // <-- pass through to preview
+                  minimizeOnScroll={minimizeOnScroll}
+                  persistOpen={persistOpen}
+                  analyticsEndpoint={analyticsEndpoint || undefined}
+                  positionOffset={{ right: offsetRight, bottom: offsetBottom }}
+                  size={size}
+                  borderRadius={borderRadius}
+                  locale={locale}
                 />
               </div>
             </div>

@@ -3,6 +3,9 @@
   if (window.__shopify_chat_widget_loader_loaded) return;
   window.__shopify_chat_widget_loader_loaded = true;
 
+  // wrapper id used by CSS and to avoid duplicate injection
+  var wrapperId = "shopify-chat-widget-wrapper";
+
   function safeDecode(val) {
     try {
       return decodeURIComponent(val || "");
@@ -99,9 +102,10 @@
   function mountWidget(settings) {
     if (!settings || settings.enabled === "false" || settings.enabled === "0") return;
 
-    var wrapperId = "shopify-chat-widget-floating";
-    if (document.getElementById(wrapperId)) return;
+    // persistence for open state
+    var open = settings.persistOpen ? (localStorage.getItem("scw_open") === "true") : (settings.defaultOpen === "true" || settings.defaultOpen === true || settings.embedded === true);
 
+    // wrapper positioning uses offsets
     var wrapper = document.createElement("div");
     wrapper.id = wrapperId;
     wrapper.className = "scw-floating";
@@ -111,14 +115,17 @@
     wrapper.style.maxWidth = "calc(100% - 32px)";
     wrapper.style.boxSizing = "border-box";
 
+    var right = settings.offsetRight || 16;
+    var bottom = settings.offsetBottom || 16;
+
     if (settings.position === "bl") {
-      wrapper.style.left = "16px";
+      wrapper.style.left = right + "px";
       wrapper.style.right = "auto";
-      wrapper.style.bottom = "16px";
+      wrapper.style.bottom = bottom + "px";
     } else {
-      wrapper.style.right = "16px";
+      wrapper.style.right = right + "px";
       wrapper.style.left = "auto";
-      wrapper.style.bottom = "16px";
+      wrapper.style.bottom = bottom + "px";
     }
 
     var root = createNode(
@@ -179,15 +186,83 @@
     wrapper.appendChild(root);
     document.body.appendChild(wrapper);
 
-    // apply colors
+    // apply colors + avatar
     var primary = settings.primaryColor || "#5b8def";
     var accent = settings.accentColor || "#7b61ff";
     header.style.background = "linear-gradient(90deg," + primary + " 0%," + accent + " 100%)";
     toggleBtn.style.background = "rgba(255,255,255,0.12)";
 
-    // state
-    var open = settings.defaultOpen === "true" || settings.defaultOpen === true || settings.embedded === true;
-    var messages = [];
+    // avatar override
+    if (settings.avatarUrl) {
+      var img = document.createElement("img");
+      img.src = settings.avatarUrl;
+      img.alt = "Chat";
+      img.style.width = "40px";
+      img.style.height = "40px";
+      img.style.borderRadius = settings.borderRadius ? settings.borderRadius + "px" : "10px";
+      // replace miniIcon content
+      miniIcon.innerHTML = "";
+      miniIcon.appendChild(img);
+    }
+
+    // basic message render helper (initial greeting + simple append)
+    function renderMessages() {
+      try {
+        body.innerHTML = "";
+        var msg = document.createElement("div");
+        msg.className = "scw-msg scw-msg-assistant show";
+        msg.textContent = settings.greeting || "Hi — how can I help?";
+        body.appendChild(msg);
+      } catch (e) {
+        // ignore render errors
+      }
+    }
+
+    // basic interaction handlers
+    header.addEventListener("click", function () {
+      setOpen(!open);
+    });
+    toggleBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      setOpen(!open);
+    });
+    send.addEventListener("click", function () {
+      var text = input.value && input.value.trim();
+      if (!text) return;
+      var um = document.createElement("div");
+      um.className = "scw-msg scw-msg-user show";
+      um.textContent = text;
+      body.appendChild(um);
+      input.value = "";
+      body.scrollTop = body.scrollHeight;
+      // simulated assistant reply
+      setTimeout(function () {
+        var am = document.createElement("div");
+        am.className = "scw-msg scw-msg-assistant show";
+        am.textContent = "Thanks! Instant Checkout lets customers complete purchases directly in chat. (Demo reply)";
+        body.appendChild(am);
+        body.scrollTop = body.scrollHeight;
+      }, 600);
+    });
+
+    // state handling with persistence + analytics
+    function saveOpenState(val) {
+      try {
+        if (settings.persistOpen) localStorage.setItem("scw_open", String(val));
+      } catch {}
+      // analytics
+      try {
+        if (settings.analyticsEndpoint) {
+          var payload = JSON.stringify({ event: val ? "open" : "close", timestamp: Date.now() });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(settings.analyticsEndpoint, payload);
+          } else {
+            fetch(settings.analyticsEndpoint, { method: "POST", body: payload, headers: { "Content-Type": "application/json" } }).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+
     function setOpen(val) {
       open = Boolean(val);
       root.setAttribute("data-open", open ? "true" : "false");
@@ -201,6 +276,7 @@
           footer.style.display = "flex";
           body.scrollTop = body.scrollHeight;
         }, 18);
+        saveOpenState(true);
       } else {
         // animate close
         root.classList.remove("scw-open");
@@ -209,72 +285,19 @@
           body.style.display = "none";
           footer.style.display = "none";
         }, 220);
+        saveOpenState(false);
       }
     }
 
-    // initial greeting
-    var greeting = settings.greeting || "Welcome! I can help you with Instant Checkout info.";
-    messages.push({ who: "assistant", text: greeting });
-
-    function renderMessages() {
-      body.innerHTML = "";
-      messages.forEach(function (m, idx) {
-        var el = document.createElement("div");
-        el.className = m.who === "user" ? "scw-msg scw-msg-user" : "scw-msg scw-msg-assistant";
-        el.innerText = m.text;
-        body.appendChild(el);
-        // staggered reveal
-        window.requestAnimationFrame(function () {
-          setTimeout(function () {
-            el.classList.add("show");
-          }, idx * 40);
-        });
-      });
-      // ensure scroll to bottom after animations start
-      setTimeout(function () {
-        body.scrollTop = body.scrollHeight;
-      }, 60);
-    }
-
-    function sendMessage(text) {
-      if (!text || !text.trim()) return;
-      messages.push({ who: "user", text: text.trim() });
-      renderMessages();
-      input.value = "";
-      // simulate assistant reply
-      setTimeout(function () {
-        messages.push({
-          who: "assistant",
-          text:
-            "Thanks! Instant Checkout lets customers complete purchases directly in chat. (Demo response.)",
-        });
-        renderMessages();
-      }, 600 + Math.random() * 700);
-    }
-
-    // events
-    header.addEventListener("click", function (e) {
-      setOpen(!open);
-    });
-    header.addEventListener("keypress", function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        setOpen(!open);
+    // minimize on scroll helper
+    if (settings.minimizeOnScroll) {
+      function onScroll() {
+        if (window.scrollY > 200) setOpen(false);
       }
-    });
-    toggleBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      setOpen(!open);
-    });
-    send.addEventListener("click", function () {
-      sendMessage(input.value);
-    });
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(input.value);
-      }
-    });
+      window.addEventListener("scroll", onScroll, { passive: true });
+      // cleanup not strictly necessary in short-lived public script, but keep safe
+      // (no reference to remove later in this simple loader)
+    }
 
     // initial render
     renderMessages();
@@ -321,6 +344,16 @@
         embedded: currentScript?.getAttribute("data-default-open") === "true" || currentScript?.getAttribute("data-embed") === "true",
         // optional icon override
         iconUrl: currentScript?.getAttribute("data-icon-url") ?? undefined,
+        // new attributes
+        avatarUrl: safeDecode(currentScript?.getAttribute("data-avatar-url")) || undefined,
+        minimizeOnScroll: currentScript?.getAttribute("data-minimize-on-scroll") === "true",
+        persistOpen: currentScript?.getAttribute("data-persist-open") === "true",
+        analyticsEndpoint: safeDecode(currentScript?.getAttribute("data-analytics-endpoint")) || undefined,
+        offsetRight: parseInt(currentScript?.getAttribute("data-offset-right") || "16", 10),
+        offsetBottom: parseInt(currentScript?.getAttribute("data-offset-bottom") || "16", 10),
+        size: parseInt(currentScript?.getAttribute("data-size") || "56", 10),
+        borderRadius: parseInt(currentScript?.getAttribute("data-border-radius") || "12", 10),
+        locale: currentScript?.getAttribute("data-locale") || "en",
       };
 
       // If disabled explicitly false, don't inject
